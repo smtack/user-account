@@ -1,7 +1,8 @@
 <?php
-require_once "init.php";
+require_once 'public/init.php';
 
-session_destroy();
+$user = new User($db);
 
-header("Location: index.php");
-?>
+$user->logOut();
+
+header("Location: " . BASE_URL);

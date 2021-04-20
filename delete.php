@@ -1,11 +1,10 @@
 <?php
-require_once "init.php";
+require_once 'public/init.php';
 
-$id = $_GET['id'];
+$user = new User($db);
 
-$query = "DELETE FROM users WHERE id = :id";
-$stmt = $db->prepare($query);
-$stmt->execute(["id" => $id]);
-
-header("Location: index.php");
-?>
+if($user->deleteUser()) {
+  header("Location: " . BASE_URL);
+} else {
+  header("Location: " . BASE_URL . "/home.php");
+}

@@ -1,98 +1,50 @@
 <?php
-require_once "init.php";
+require_once 'public/init.php';
 
-$id = $_GET['id'];
+$user = new User($db);
 
-$query = "SELECT * FROM users WHERE id = :id";
-$stmt = $db->prepare($query);
-$stmt->execute([
-  "id" => $id
-]);
-
-$user_data = $stmt->fetch();
+$get_user_data = $user->getUser();
+$user_data = $get_user_data->fetch();
 
 if(isset($_POST['update'])) {
-  $name = htmlentities($_POST['name']);
-  $username = htmlentities($_POST['username']);
-  $email = htmlentities($_POST['email']);
+  if(empty($_POST['name']) || empty($_POST['username']) || empty($_POST['email'])) {
+    $error = "Fill in all fields";
+  } else {
+    $user->name = $_POST['name'];
+    $user->username = $_POST['username'];
+    $user->email = $_POST['email'];
 
-  $query = "UPDATE users SET name = :name, username = :username, email = :email WHERE id = :id";
-  $stmt = $db->prepare($query);
-  $stmt->execute([
-    "id" => $id,
-    "name" => $name,
-    "username" => $username,
-    "email" => $email
-  ]);
-
-  header("Location: home.php");
+    if($user->updateUser()) {
+      $_SESSION['username'] = $user->username;
+      
+      header("Location: " . BASE_URL . "/home.php");
+    } else {
+      $error = "Unable to update profile";
+    }
+  }
 }
 
 if(isset($_POST['change_password'])) {
-  $confirm_password = $_POST['confirm_password'];
-  $new_password = $_POST['new_password'];
-  $new_hashed_password = password_hash($new_password, PASSWORD_BCRYPT);
-
-  if(password_verify($confirm_password, $user_data['password'])) {
-    $query = "UPDATE users SET password = :password WHERE id = :id";
-    $stmt = $db->prepare($query);
-    $stmt->execute([
-      "id" => $id,
-      "password" => $new_hashed_password
-    ]);
-
-    header("Location: home.php");
+  if(empty($_POST['confirm_password']) || empty($_POST['new_password']) || empty($_POST['confirm_new_password'])) {
+    $password_error = "Fill in all fields";
   } else {
-    echo("<p>Enter your current password correctly</p>");
+    if($_POST['new_password'] != $_POST['confirm_new_password']) {
+      $password_error = "Passwords must match";
+    } else {
+      $user->confirm_password = $_POST['confirm_password'];
+      $user->new_password = $_POST['new_password'];
+  
+      if(password_verify($user->confirm_password, $user_data['password'])) {
+        if($user->changePassword()) {
+          header("Location: " . BASE_URL . "/home.php");
+        } else {
+          $password_error = "Unable to change password";
+        }
+      } else {
+        $password_error = "Enter current password correctly";
+      }
+    }
   }
 }
-?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>user-account</title>
-</head>
-<body>
-  <div class="container">
-    <h1>user-account</h1>
-
-    <h3>Update Profile</h3>
-
-    <div class="form">
-      <form action="<?php $_SERVER['PHP_SELF']; ?>" method="POST">
-        <div class="form-group">
-          <input type="text" name="name" value="<?php echo $user_data['name']; ?>">
-        </div>
-        <div class="form-group">
-          <input type="text" name="username" value="<?php echo $user_data['username']; ?>">
-        </div>
-        <div class="form-group">
-          <input type="text" name="email" value="<?php echo $user_data['email']; ?>">
-        </div>
-        <div class="form-group">
-          <input type="submit" name="update" value="Update">
-        </div>
-      </form>
-    </div>
-    <div class="form">
-      <form action="<?php $_SERVER['PHP_SELF']; ?>" method="POST">
-        <div class="form-group">
-          <p>Change Password</p>
-        </div>
-        <div class="form-group">
-          <input type="password" name="confirm_password" placeholder="Confirm Password">
-        </div>
-        <div class="form-group">
-          <input type="password" name="new_password" placeholder="New Password">
-        </div>
-        <div class="form-group">
-          <input type="submit" name="change_password" value="Change Password">
-        </div>
-      </form>
-    </div>
-  </div>
-</body>
-</html>
+require VIEW_ROOT . '/update.php';
